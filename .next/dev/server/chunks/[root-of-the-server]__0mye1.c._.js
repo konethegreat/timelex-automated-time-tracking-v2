@@ -126,14 +126,19 @@ const globalForPrisma = globalThis;
 function createPrismaClient() {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
-        throw new Error("DATABASE_URL is not set");
+        throw new Error("DATABASE_URL is not set. Please check your .env file and ensure DATABASE_URL is configured.");
     }
-    const adapter = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$prisma$2f$adapter$2d$pg$2f$dist$2f$index$2e$mjs__$5b$app$2d$route$5d$__$28$ecmascript$29$__["PrismaPg"]({
-        connectionString
-    });
-    return new __TURBOPACK__imported__module__$5b$externals$5d2f40$prisma$2f$client__$5b$external$5d$__$2840$prisma$2f$client$2c$__cjs$2c$__$5b$project$5d2f$node_modules$2f40$prisma$2f$client$29$__["PrismaClient"]({
-        adapter
-    });
+    try {
+        const adapter = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$prisma$2f$adapter$2d$pg$2f$dist$2f$index$2e$mjs__$5b$app$2d$route$5d$__$28$ecmascript$29$__["PrismaPg"]({
+            connectionString
+        });
+        return new __TURBOPACK__imported__module__$5b$externals$5d2f40$prisma$2f$client__$5b$external$5d$__$2840$prisma$2f$client$2c$__cjs$2c$__$5b$project$5d2f$node_modules$2f40$prisma$2f$client$29$__["PrismaClient"]({
+            adapter
+        });
+    } catch (error) {
+        console.error("Failed to initialize Prisma client:", error);
+        throw new Error(`Failed to connect to database. Please verify your DATABASE_URL is correct. Details: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }
 const prisma = globalForPrisma.prisma ?? createPrismaClient();
 if ("TURBOPACK compile-time truthy", 1) {
@@ -177,19 +182,24 @@ var __turbopack_async_dependencies__ = __turbopack_handle_async_dependencies__([
 ;
 ;
 async function loadTenantUser(email) {
-    return __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].user.findUnique({
-        where: {
-            email
-        },
-        select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true,
-            organizationId: true,
-            passwordHash: true
-        }
-    });
+    try {
+        return await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].user.findUnique({
+            where: {
+                email
+            },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                organizationId: true,
+                passwordHash: true
+            }
+        });
+    } catch (error) {
+        console.error("Failed to load user from database:", error);
+        throw error;
+    }
 }
 const providers = [
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$auth$2f$core$2f$providers$2f$credentials$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"])({
@@ -258,12 +268,17 @@ const nextAuth = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_module
                 return token;
             }
             if (token.email && !token.organizationId) {
-                const dbUser = await loadTenantUser(token.email);
-                if (dbUser?.organizationId) {
-                    token.id = dbUser.id;
-                    token.organizationId = dbUser.organizationId;
-                    token.role = dbUser.role;
-                    token.name = dbUser.name;
+                try {
+                    const dbUser = await loadTenantUser(token.email);
+                    if (dbUser?.organizationId) {
+                        token.id = dbUser.id;
+                        token.organizationId = dbUser.organizationId;
+                        token.role = dbUser.role;
+                        token.name = dbUser.name;
+                    }
+                } catch (error) {
+                    console.error("Failed to load user from database in JWT callback:", error);
+                // Return token as-is to avoid breaking the session
                 }
             }
             return token;
