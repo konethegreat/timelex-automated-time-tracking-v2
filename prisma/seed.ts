@@ -1,8 +1,10 @@
 import "dotenv/config";
+import { hash } from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 
 const ORG_DOMAIN = "mblegalpartners.co.za";
+const DEMO_PASSWORD = "TimeLex2026!";
 
 /** 1 unit = 6 minutes of billable time */
 function entryValue(units: number, hourlyRate: number): Prisma.Decimal {
@@ -32,6 +34,8 @@ async function main() {
 
   await clearDemoOrg();
 
+  const passwordHash = await hash(DEMO_PASSWORD, 12);
+
   const organization = await prisma.organization.create({
     data: {
       name: "M&B Legal Partners",
@@ -46,6 +50,7 @@ async function main() {
       name: "Johan Motsoeneng",
       email: "johan.motsoeneng@mblegalpartners.co.za",
       role: "FIRM_ADMIN",
+      passwordHash,
       defaultHourlyRate: new Prisma.Decimal("4200.00"),
       monthlyBillableTarget: 100,
     },
@@ -57,6 +62,7 @@ async function main() {
       name: "Stephanie Chetty",
       email: "stephanie.chetty@mblegalpartners.co.za",
       role: "FEE_EARNER",
+      passwordHash,
       defaultHourlyRate: new Prisma.Decimal("3500.00"),
       monthlyBillableTarget: 140,
     },
@@ -68,6 +74,7 @@ async function main() {
       name: "Anchané Botha",
       email: "anchane.botha@mblegalpartners.co.za",
       role: "FEE_EARNER",
+      passwordHash,
       defaultHourlyRate: new Prisma.Decimal("2200.00"),
       monthlyBillableTarget: 130,
     },
@@ -258,7 +265,13 @@ async function main() {
   console.log("    — 2 × PENDING (awaiting Ghost Practice push)");
   console.log("    — 1 × ERROR   (gateway rejection — editable)");
   console.log("    — 2 × SYNCED  (syncLock: true — ledger locked)\n");
-  console.log("Dev session hints (.env):");
+  console.log("Sign-in (credentials):");
+  console.log(`  Password (all users): ${DEMO_PASSWORD}`);
+  console.log(`  Admin  : ${admin.email}`);
+  console.log(`  User 1 : ${stephanie.email}`);
+  console.log(`  User 2 : ${anchane.email}\n`);
+  console.log("Optional dev bypass (.env):");
+  console.log(`  ALLOW_DEV_AUTH_BYPASS=true`);
   console.log(`  DEV_SESSION_ORG_ID=${organization.id}`);
   console.log(`  DEV_SESSION_USER_ID=${admin.id}`);
   console.log(`  DEV_SESSION_EMAIL=${admin.email}`);
