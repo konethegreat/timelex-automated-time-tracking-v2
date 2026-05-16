@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { notify } from "@/lib/notify";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
     const result = await signIn("credentials", {
       email,
@@ -23,20 +25,26 @@ export function LoginForm() {
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid credentials or no firm access assigned.");
+      notify.error("Sign-in failed", {
+        description:
+          "Invalid credentials or no firm workspace assigned to this account.",
+      });
       return;
     }
 
+    notify.success("Welcome back", {
+      description: "Loading your executive dashboard…",
+    });
     window.location.href = "/dashboard";
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 text-left">
+    <form onSubmit={onSubmit} className="space-y-5">
       <div className="space-y-2">
-        <label htmlFor="email" className="text-xs font-medium text-muted">
+        <Label htmlFor="email" className="text-muted-foreground">
           Work email
-        </label>
-        <input
+        </Label>
+        <Input
           id="email"
           name="email"
           type="email"
@@ -44,14 +52,14 @@ export function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
+          className="border-border bg-card focus-visible:border-primary focus-visible:ring-primary/30"
         />
       </div>
       <div className="space-y-2">
-        <label htmlFor="password" className="text-xs font-medium text-muted">
+        <Label htmlFor="password" className="text-muted-foreground">
           Password
-        </label>
-        <input
+        </Label>
+        <Input
           id="password"
           name="password"
           type="password"
@@ -59,21 +67,16 @@ export function LoginForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
+          className="border-border bg-card focus-visible:border-primary focus-visible:ring-primary/30"
         />
       </div>
-      {error ? (
-        <p className="text-sm text-red-400" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <button
+      <Button
         type="submit"
         disabled={loading}
-        className="w-full rounded-md bg-gradient-to-r from-gold-dark to-gold py-2.5 text-sm font-semibold text-black transition-opacity disabled:opacity-50"
+        className="w-full bg-primary font-semibold text-primary-foreground hover:bg-accent"
       >
         {loading ? "Signing in…" : "Sign in"}
-      </button>
+      </Button>
     </form>
   );
 }

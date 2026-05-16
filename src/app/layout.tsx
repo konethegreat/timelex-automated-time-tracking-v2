@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { AuthSessionProvider } from "@/components/providers/session-provider";
+import { ToasterProvider } from "@/components/providers/toaster-provider";
+import { cn } from "@/lib/utils";
 import "./globals.css";
 
 const inter = Inter({
@@ -20,9 +22,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full dark`}>
-      <body className="min-h-full flex flex-col bg-background text-foreground antialiased">
-        <AuthSessionProvider>{children}</AuthSessionProvider>
+    <html
+      lang="en"
+      className={cn("h-full dark", inter.variable)}
+      suppressHydrationWarning
+    >
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <AuthSessionProvider>
+          <ToasterProvider>{children}</ToasterProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );

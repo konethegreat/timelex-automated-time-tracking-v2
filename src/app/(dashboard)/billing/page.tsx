@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/features/page-header";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function BillingPage() {
   return (
@@ -8,9 +9,16 @@ export default function BillingPage() {
         description="Compile matter-filtered entries into client-facing invoices with 15% VAT."
       />
       <section className="p-8">
-        <p className="text-sm text-muted">
-          Universal billing engine — PDF export in the next phase.
-        </p>
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="text-base text-primary">
+              Universal billing engine
+            </CardTitle>
+            <CardDescription>
+              PDF export and matter filters — next phase.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </section>
     </>
   );
