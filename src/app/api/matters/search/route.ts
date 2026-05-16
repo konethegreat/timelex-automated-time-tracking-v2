@@ -19,7 +19,7 @@ export async function GET(request: Request) {
               OR: [
                 { matterNumber: { contains: q, mode: "insensitive" } },
                 { clientName: { contains: q, mode: "insensitive" } },
-                { areaOfLaw: { contains: q, mode: "insensitive" } },
+                { description: { contains: q, mode: "insensitive" } },
               ],
             }
           : {}),
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         id: true,
         matterNumber: true,
         clientName: true,
-        areaOfLaw: true,
+        description: true,
       },
     });
 

@@ -4,12 +4,9 @@ export type {
   Matter,
   Draft,
   TimeEntry,
-  SubscriptionTier,
   UserRole,
-  MatterStatus,
   ActivityType,
-  SourcePlatform,
   SyncStatus,
-} from "@/generated/prisma/client";
+} from "@prisma/client";
 
 export type { SessionUser, AppSession } from "@/lib/auth";

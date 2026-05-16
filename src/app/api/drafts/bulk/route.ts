@@ -10,7 +10,7 @@ import {
 type BulkDraftPatch = {
   draftIds: string[];
   matterId?: string | null;
-  suggestedNarration?: string;
+  suggestedText?: string;
 };
 
 export async function PATCH(request: Request) {
@@ -47,12 +47,12 @@ export async function PATCH(request: Request) {
 
     const data: {
       matterId?: string | null;
-      suggestedNarration?: string;
+      suggestedText?: string;
     } = {};
 
     if (body.matterId !== undefined) data.matterId = body.matterId;
-    if (body.suggestedNarration !== undefined) {
-      data.suggestedNarration = body.suggestedNarration;
+    if (body.suggestedText !== undefined) {
+      data.suggestedText = body.suggestedText;
     }
 
     await prisma.draft.updateMany({

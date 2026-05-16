@@ -21,7 +21,7 @@ export async function GET() {
         prisma.timeEntry.aggregate({
           where: {
             ...scope,
-            approvedAt: { gte: startOfDay },
+            createdAt: { gte: startOfDay },
             syncStatus: { not: "ERROR" },
           },
           _sum: { units: true },
@@ -29,7 +29,7 @@ export async function GET() {
         prisma.timeEntry.aggregate({
           where: {
             ...scope,
-            approvedAt: { gte: startOfMonth },
+            createdAt: { gte: startOfMonth },
           },
           _sum: { units: true, totalValue: true },
         }),
@@ -38,14 +38,15 @@ export async function GET() {
         }),
         prisma.timeEntry.findMany({
           where: scope,
-          orderBy: { approvedAt: "desc" },
+          orderBy: { createdAt: "desc" },
           take: 10,
           select: {
             id: true,
             units: true,
-            finalizedNarration: true,
+            finalizedText: true,
             syncStatus: true,
-            approvedAt: true,
+            syncLock: true,
+            createdAt: true,
             matter: { select: { matterNumber: true, clientName: true } },
             user: { select: { name: true, email: true } },
           },
@@ -60,9 +61,7 @@ export async function GET() {
     const todayUnits = todayEntries._sum.units ?? 0;
     const monthUnits = monthEntries._sum.units ?? 0;
     const monthValue = monthEntries._sum.totalValue ?? 0;
-    const targetHours = user
-      ? Number(user.monthlyBillableTarget)
-      : 160;
+    const targetHours = user?.monthlyBillableTarget ?? 120;
 
     return NextResponse.json({
       todayBillableHours: unitsToHours(todayUnits),

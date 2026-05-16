@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   handleApiError,
@@ -64,7 +64,8 @@ export async function POST(request: Request) {
             userId: draft.userId,
             matterId: draft.matterId!,
             units: draft.units,
-            finalizedNarration: draft.suggestedNarration,
+            finalizedText: draft.suggestedText,
+            hourlyRateApplied: new Prisma.Decimal(hourlyRate.toFixed(2)),
             totalValue: new Prisma.Decimal(totalValue.toFixed(2)),
             syncStatus: "PENDING",
             syncLock: false,

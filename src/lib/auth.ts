@@ -1,4 +1,4 @@
-import type { UserRole } from "@/generated/prisma/client";
+import type { UserRole } from "@prisma/client";
 
 /**
  * Session shape used across API routes.
@@ -8,7 +8,7 @@ export type SessionUser = {
   id: string;
   organizationId: string;
   email: string;
-  name: string | null;
+  name: string;
   role: UserRole;
 };
 
@@ -21,7 +21,6 @@ export type AppSession = {
  * Returns null when unauthenticated.
  */
 export async function getSession(): Promise<AppSession | null> {
-  // TODO: integrate Auth.js `auth()` once providers are configured
   if (process.env.NODE_ENV === "development" && process.env.DEV_SESSION_USER_ID) {
     return {
       user: {
