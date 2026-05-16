@@ -8,17 +8,22 @@ import { authConfig } from "@/auth.config";
 import { prisma } from "@/lib/prisma";
 
 async function loadTenantUser(email: string) {
-  return prisma.user.findUnique({
-    where: { email },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      organizationId: true,
-      passwordHash: true,
-    },
-  });
+  try {
+    return await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        organizationId: true,
+        passwordHash: true,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to load user from database:", error);
+    throw error;
+  }
 }
 
 const providers: Provider[] = [
@@ -96,12 +101,17 @@ const nextAuth = NextAuth({
       }
 
       if (token.email && !token.organizationId) {
-        const dbUser = await loadTenantUser(token.email);
-        if (dbUser?.organizationId) {
-          token.id = dbUser.id;
-          token.organizationId = dbUser.organizationId;
-          token.role = dbUser.role;
-          token.name = dbUser.name;
+        try {
+          const dbUser = await loadTenantUser(token.email);
+          if (dbUser?.organizationId) {
+            token.id = dbUser.id;
+            token.organizationId = dbUser.organizationId;
+            token.role = dbUser.role;
+            token.name = dbUser.name;
+          }
+        } catch (error) {
+          console.error("Failed to load user from database in JWT callback:", error);
+          // Return token as-is to avoid breaking the session
         }
       }
 
