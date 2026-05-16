@@ -20,6 +20,7 @@ node_modules/
 dist/
 build/
 *.js.map
+.next/
 
 # Python artifacts (if any Python in project)
 __pycache__/

@@ -15,7 +15,7 @@ export const GET = withTenantApi(async (_request, _context, session) => {
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const [todayEntries, monthEntries, pendingDrafts, recentEntries] =
+  const [todayEntries, monthEntries, pendingDrafts, recentEntries, activeMatters, unassignedDrafts] =
     await Promise.all([
       prisma.timeEntry.aggregate({
         where: {
@@ -50,6 +50,18 @@ export const GET = withTenantApi(async (_request, _context, session) => {
           user: { select: { name: true, email: true } },
         },
       }),
+      prisma.matter.count({
+        where: { ...scope, status: "ACTIVE" },
+      }),
+      prisma.draft.findMany({
+        where: { ...scope, matterId: null },
+        select: {
+          units: true,
+          activityType: true,
+          sourcePlatform: true,
+          user: { select: { defaultHourlyRate: true } },
+        },
+      }),
     ]);
 
   const user = await prisma.user.findFirst({
@@ -62,12 +74,21 @@ export const GET = withTenantApi(async (_request, _context, session) => {
   const monthValue = monthEntries._sum.totalValue ?? 0;
   const targetHours = user?.monthlyBillableTarget ?? 120;
 
+  // Calculate leaked billable recovery value from unassigned drafts
+  const leakedRecoveryValue = unassignedDrafts.reduce((total, draft) => {
+    const hourlyRate = Number(draft.user.defaultHourlyRate);
+    const hours = unitsToHours(draft.units);
+    return total + (hours * hourlyRate);
+  }, 0);
+
   return NextResponse.json({
     todayBillableHours: unitsToHours(todayUnits),
     monthBillableHours: unitsToHours(monthUnits),
     monthRealizedValue: Number(monthValue),
     monthlyTargetHours: targetHours,
     pendingDraftCount: pendingDrafts,
+    activeMattersCount: activeMatters,
+    leakedRecoveryValue,
     recentActivity: recentEntries,
   });
 });
