@@ -2,7 +2,7 @@ import type { UserRole } from "@prisma/client";
 import type { NextAuthConfig } from "next-auth";
 
 /**
- * Edge-safe Auth.js config (middleware / route guards).
+ * Database-free Auth.js config (proxy / route guards).
  * Providers and database callbacks are defined in auth.ts.
  */
 export const authConfig = {

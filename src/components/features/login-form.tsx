@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { notify } from "@/lib/notify";
 
 export function LoginForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,7 +26,7 @@ export function LoginForm() {
 
     setLoading(false);
 
-    if (result?.error) {
+    if (!result?.ok || result.error) {
       notify.error("Sign-in failed", {
         description:
           "Invalid credentials or no firm workspace assigned to this account.",
@@ -35,7 +37,8 @@ export function LoginForm() {
     notify.success("Welcome back", {
       description: "Loading your executive dashboard…",
     });
-    window.location.href = "/dashboard";
+    router.replace("/dashboard");
+    router.refresh();
   }
 
   return (

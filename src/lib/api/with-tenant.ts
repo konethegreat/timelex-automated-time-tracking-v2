@@ -1,5 +1,4 @@
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import type { AppSession } from "@/lib/auth";
 import { handleApiError, requireTenantSession } from "@/lib/tenant";
 
