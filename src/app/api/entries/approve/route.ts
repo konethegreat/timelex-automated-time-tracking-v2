@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { withTenantApi } from "@/lib/api/with-tenant";
+import { entryValue } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
 import { tenantWhere } from "@/lib/tenant";
 
@@ -48,7 +48,7 @@ export const POST = withTenantApi(async (request, _context, session) => {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const hourlyRate = Number(user.defaultHourlyRate);
+  const hourlyRate = user.defaultHourlyRate;
   const entries = await prisma
     .$transaction(async (tx) => {
       // Take the drafts first. A DELETE locks the rows, so when two requests
@@ -65,9 +65,6 @@ export const POST = withTenantApi(async (request, _context, session) => {
       const created = [];
 
       for (const draft of drafts) {
-        const unitHours = (draft.units * 6) / 60;
-        const totalValue = unitHours * hourlyRate;
-
         const entry = await tx.timeEntry.create({
           data: {
             organizationId,
@@ -75,8 +72,8 @@ export const POST = withTenantApi(async (request, _context, session) => {
             matterId: draft.matterId!,
             units: draft.units,
             finalizedText: draft.suggestedText,
-            hourlyRateApplied: new Prisma.Decimal(hourlyRate.toFixed(2)),
-            totalValue: new Prisma.Decimal(totalValue.toFixed(2)),
+            hourlyRateApplied: hourlyRate,
+            totalValue: entryValue(draft.units, hourlyRate),
             syncStatus: "PENDING",
             syncLock: false,
           },
