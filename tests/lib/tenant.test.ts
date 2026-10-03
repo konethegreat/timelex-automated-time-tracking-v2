@@ -55,6 +55,16 @@ describe("assertTenantOwnership", () => {
       }
     }
   });
+
+  it("refuses a malformed organization id even when the record carries the same value", () => {
+    try {
+      assertTenantOwnership({ organizationId: "firm-a" }, "firm-a");
+      expect.unreachable("expected a TenantError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TenantError);
+      expect((error as TenantError).status).toBe(403);
+    }
+  });
 });
 
 describe("requireTenantSession", () => {
@@ -69,6 +79,19 @@ describe("requireTenantSession", () => {
       user: {
         id: ids.earnerA1,
         organizationId: "",
+        email: "x@firm-a.example",
+        name: "X",
+        role: "FEE_EARNER",
+      },
+    });
+    await expect(requireTenantSession()).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("rejects a session that carries no user id with 401", async () => {
+    vi.mocked(getSession).mockResolvedValue({
+      user: {
+        id: "",
+        organizationId: ids.orgA,
         email: "x@firm-a.example",
         name: "X",
         role: "FEE_EARNER",
