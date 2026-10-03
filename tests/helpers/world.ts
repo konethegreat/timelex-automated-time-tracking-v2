@@ -7,7 +7,7 @@ import { Prisma } from "@prisma/client";
 import { vi } from "vitest";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { FakePrisma, ModelName, Row } from "./fake-prisma";
+import type { Call, FakePrisma, ModelName, Row } from "./fake-prisma";
 
 /** The mocked Prisma client (see tests/setup.ts). */
 export const fake = prisma as unknown as FakePrisma;
@@ -154,9 +154,13 @@ export function seedWorld() {
   });
 }
 
+/** The organization the route handlers currently see as signed in (null when nobody is). */
+let activeOrganization: string | null = null;
+
 /** Makes route handlers see the given synthetic user as signed in. */
 export function signInAs(key: UserKey) {
   const u = USERS[key];
+  activeOrganization = u.orgId;
   vi.mocked(getSession).mockResolvedValue({
     user: {
       id: ids[key],
@@ -169,6 +173,7 @@ export function signInAs(key: UserKey) {
 }
 
 export function signedOut() {
+  activeOrganization = null;
   vi.mocked(getSession).mockResolvedValue(null);
 }
 
@@ -176,6 +181,36 @@ type RouteHandler = (
   request: NextRequest,
   context: { params: Promise<Record<string, string>> },
 ) => Promise<Response> | Response;
+
+/**
+ * The rule from src/lib/tenant.ts, applied to what a route asked the database for:
+ * every query carries the caller's organizationId (in `where` for reads, updates and
+ * deletes, in `data` for creates), and a request without a session does not touch the
+ * database at all. invoke() checks this on every route call, so a query that forgets
+ * the filter fails a test even when its result happens to look right.
+ */
+export function assertCallsScoped(calls: Call[], organizationId: string | null) {
+  const problems: string[] = [];
+  for (const { model, operation, args } of calls) {
+    const label = `${model}.${operation}`;
+    if (organizationId === null) {
+      problems.push(`${label} ran without a signed-in user`);
+    } else if (model === "organization") {
+      if (args?.where?.id !== organizationId) {
+        problems.push(`${label} is not limited to the caller's organization`);
+      }
+    } else if (operation === "create") {
+      if (args?.data?.organizationId !== organizationId) {
+        problems.push(`${label} creates a row outside the caller's organization`);
+      }
+    } else if (args?.where?.organizationId !== organizationId) {
+      problems.push(`${label} has no filter for the caller's organizationId`);
+    }
+  }
+  if (problems.length > 0) {
+    throw new Error(`Tenant scoping violated:\n- ${problems.join("\n- ")}`);
+  }
+}
 
 /** Calls a route handler the way Next.js would and returns status plus JSON body. */
 export async function invoke<T = Record<string, unknown>>(
@@ -187,7 +222,9 @@ export async function invoke<T = Record<string, unknown>>(
     headers: { "content-type": "application/json" },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   });
+  const callsBefore = fake.$calls.length;
   const response = await handler(request, { params: Promise.resolve({}) });
+  assertCallsScoped(fake.$calls.slice(callsBefore), activeOrganization);
   return { status: response.status, body: (await response.json()) as T };
 }
 

@@ -130,6 +130,13 @@ function compareValues(a: unknown, b: unknown): number {
   return String(a).localeCompare(String(b));
 }
 
+/** One call made to the fake client, kept so tests can inspect what a route asked for. */
+export type Call = {
+  model: ModelName;
+  operation: string;
+  args?: { where?: Row; data?: Row };
+};
+
 export type FailureRule = {
   model: ModelName;
   operation: string;
@@ -144,11 +151,13 @@ export function createFakePrisma() {
   ) as Record<ModelName, Row[]>;
 
   const callCounts = new Map<string, number>();
+  const calls: Call[] = [];
   let failures: FailureRule[] = [];
 
   const hooks: { beforeTransaction?: () => void } = {};
 
-  function guard(model: ModelName, operation: string) {
+  function guard(model: ModelName, operation: string, args?: Args) {
+    calls.push({ model, operation, args });
     const key = `${model}.${operation}`;
     const count = (callCounts.get(key) ?? 0) + 1;
     callCounts.set(key, count);
@@ -219,19 +228,19 @@ export function createFakePrisma() {
   function delegate(model: ModelName) {
     return {
       async findMany(args?: Args) {
-        guard(model, "findMany");
+        guard(model, "findMany", args);
         return find(model, args);
       },
       async findFirst(args?: Args) {
-        guard(model, "findFirst");
+        guard(model, "findFirst", args);
         return find(model, { ...args, take: 1 })[0] ?? null;
       },
       async count(args?: Args) {
-        guard(model, "count");
+        guard(model, "count", args);
         return tables[model].filter((row) => matches(row, args?.where)).length;
       },
       async create(args: Args) {
-        guard(model, "create");
+        guard(model, "create", args);
         const row: Row = {
           id: randomUUID(),
           ...DEFAULTS[model](),
@@ -241,13 +250,13 @@ export function createFakePrisma() {
         return { ...row };
       },
       async updateMany(args: Args) {
-        guard(model, "updateMany");
+        guard(model, "updateMany", args);
         const targets = tables[model].filter((row) => matches(row, args.where));
         for (const row of targets) Object.assign(row, args.data);
         return { count: targets.length };
       },
       async deleteMany(args: Args) {
-        guard(model, "deleteMany");
+        guard(model, "deleteMany", args);
         const before = tables[model].length;
         tables[model] = tables[model].filter(
           (row) => !matches(row, args.where),
@@ -255,7 +264,7 @@ export function createFakePrisma() {
         return { count: before - tables[model].length };
       },
       async aggregate(args: Args) {
-        guard(model, "aggregate");
+        guard(model, "aggregate", args);
         const rows = tables[model].filter((row) => matches(row, args.where));
         const sums: Row = {};
         for (const field of Object.keys(args._sum ?? {})) {
@@ -305,12 +314,14 @@ export function createFakePrisma() {
 
     // ---- test helpers (not part of the Prisma API) ----
     $tables: tables,
+    $calls: calls,
     $hooks: hooks,
     $failOn(rule: FailureRule) {
       failures = [...failures, rule];
     },
     $reset() {
       for (const name of MODELS) tables[name] = [];
+      calls.length = 0;
       callCounts.clear();
       failures = [];
       hooks.beforeTransaction = undefined;
