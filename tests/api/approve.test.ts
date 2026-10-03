@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PATCH } from "@/app/api/drafts/bulk/route";
 import { POST } from "@/app/api/entries/approve/route";
@@ -129,6 +130,32 @@ describe("POST /api/entries/approve", () => {
       expect(status).toBeGreaterThanOrEqual(400);
       expect(rowsOf("timeEntry")).toHaveLength(0);
       expect(draftIdsInDb()).toContain(ids.draftA3);
+    });
+
+    it("does not bill twice when another request approves the same draft right after this one has read it", async () => {
+      signInAs("earnerA1");
+      // The other request: its entry is saved and the draft is gone by the time
+      // this request's transaction starts.
+      fake.$hooks.beforeTransaction = () => {
+        fake.$insert("timeEntry", {
+          organizationId: ids.orgA,
+          userId: ids.earnerA1,
+          matterId: ids.matterA1,
+          units: 3,
+          finalizedText: "Synthetic review of settlement draft",
+          hourlyRateApplied: new Prisma.Decimal("3500.00"),
+          totalValue: new Prisma.Decimal("1050.00"),
+        });
+        fake.$tables.draft = fake.$tables.draft.filter(
+          (row) => row.id !== ids.draftA3,
+        );
+      };
+
+      const { status, body } = await approve([ids.draftA3]);
+
+      expect(status).toBe(409);
+      expect(body.error).toBe("Drafts were already approved or removed");
+      expect(rowsOf("timeEntry")).toHaveLength(1); // only the other request's entry
     });
   });
 
