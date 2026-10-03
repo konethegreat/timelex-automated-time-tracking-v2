@@ -63,10 +63,10 @@ export function SystemStatusLog({ recentActivity }: SystemStatusLogProps) {
     <Card className="border-border bg-card">
       <CardHeader>
         <CardDescription className="text-muted-foreground">
-          Real-Time System Status
+          Latest time entries
         </CardDescription>
         <CardTitle className="text-2xl text-foreground">
-          Incoming Tracking Data
+          Recent Activity
         </CardTitle>
       </CardHeader>
       <CardContent>
