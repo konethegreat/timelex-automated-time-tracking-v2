@@ -1,63 +1,94 @@
-# TimeLex: Enterprise AI-Automated Legal Time Capture Engine
+# TimeLex v2
 
-[![Framework](https://img.shields.io/badge/Framework-Next.js%2014-black?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![Database](https://img.shields.io/badge/Database-PostgreSQL-blue?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
-[![ORM](https://img.shields.io/badge/ORM-Prisma-darkblue?style=flat-square&logo=prisma)](https://www.prisma.io/)
-[![Deployment](https://img.shields.io/badge/Deployment-Vercel-black?style=flat-square&logo=vercel)](https://vercel.com)
+A legal time-review application for law firms. It provides tenant-scoped drafts,
+matter assignment, approval into a time ledger, a simulated synchronization
+gateway, and billing views.
 
-TimeLex is a production-grade, multi-tenant B2B SaaS middleware application engineered to eliminate billable time leakage in mid-to-large tier law firms. By functioning as an automated background intelligence layer on top of legacy practice management platforms—specifically **Ghost Practice**—TimeLex captures, structures, and serializes digital activity directly into compliant billable metrics without manual time reconstruction.
+[![CI](https://github.com/konethegreat/timelex-automated-time-tracking-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/konethegreat/timelex-automated-time-tracking-v2/actions/workflows/ci.yml)
 
-## ⚖️ The Problem We Solve
-Legal practitioners lose an estimated **30% to 40% of their billable capacity** to manual time reconstruction traps. Attorneys routinely spend hours at the end of every week parsing sent emails, calendar schedules, and communication logs to retroactively draft fee entries. 
-* **Revenue Leakage:** Short, high-frequency actions (e.g., brief client emails, quick follow-up calls) are often forgotten entirely.
-* **Operational Inefficiency:** Manual data retyping into older desktop ledgers costs valuable legal minds days of actual output every month.
-* **Compliance Overheads:** Unstructured narratives lead to invoice disputes and compliance bottlenecks under regional frameworks like POPIA.
+## Current scope
 
-TimeLex turns the billing model upside down: **Auto-detect, don't reconstruct. Review, don't retype.**
+This repository is a prototype. The Ghost Practice gateway updates local ledger
+state and returns a simulated success or failure; it does not send records to
+a live practice-management system. Microsoft Entra sign-in is optional, and
+automatic Microsoft Graph activity ingestion and a live AI narrative service
+are not established by the current implementation.
 
----
+The implemented workflow is:
 
-## 🚀 Key Platform Features
+1. Sign in as a user belonging to an organization.
+2. Review that organization's time drafts and assign matters.
+3. Approve drafts into ledger entries, priced in six-minute units.
+4. Send selected pending entries through the simulated gateway.
+5. View synchronized entries with their sync lock and inspect billing views.
 
-### 1. Unified Multi-Tenant Architecture
-Built from the ground up to support secure, isolated organizational boundaries. Multiple distinct law firms can access the platform concurrently, keeping internal records, staff parameters, and billing rates entirely segregated at the database level.
+Tenant tests use a fake Prisma database. They exercise route behavior and query
+scope; they do not prove database deployment or production isolation.
 
-### 2. Autonomous Activity Capture & Validation Pipeline
-Monitors background communication vectors (simulated via Microsoft Graph APIs) to curate a real-time feed of unbilled events. Attorneys interact with a streamlined validation queue to match entries with matters, adjust automated narrative wording, and push them to production ledgers instantly.
+## Stack
 
-### 3. Smart Narrative Engine
-Transforms raw data metadata (e.g., "Email to client_id regarding discovery documents") into highly polished, industry-standard legal descriptions ready for executive invoicing, minimizing the need for manual corrections.
+Next.js **16.2.6**, React **19.2.4**, TypeScript, Auth.js v5 beta,
+Prisma **7**, PostgreSQL, and Tailwind CSS. The package lock records the installed
+dependency versions. CI currently uses Node.js 24.
 
-### 4. Deterministic Ledger Sync-Lock
-Once a billing record is successfully processed and flagged as synced to the main practice database, the platform enforces an immutable data state. This mitigates accounting discrepancies and prevents compliance breaches from duplicate ledger adjustments.
+## Local setup
 
-### 5. Pro-Forma Financial Analytics
-Provides self-service oversight for fee earners to review active ledger status per matter, track monthly metrics against custom financial targets, and instantly generate transparent invoice drafts including local tax calculations (15% VAT).
+Use Node.js 24 and a disposable PostgreSQL database:
 
----
+```bash
+git clone https://github.com/konethegreat/timelex-automated-time-tracking-v2.git
+cd timelex-automated-time-tracking-v2
+npm ci
+cp .env.example .env
+# PowerShell: Copy-Item .env.example .env
+```
 
-## 🛠️ The Production Architecture Stack
+Set `DATABASE_URL` to your local database and set `AUTH_SECRET` to a newly
+generated random value:
 
-```text
-       ┌────────────────────────────────────────────────────────┐
-       │                TimeLex Web Application                 │
-       │     (Next.js App Router • React • Tailwind CSS)        │
-       └───────────────────────────┬────────────────────────────┘
-                                   │
-                    Secure REST / Edge API Requests
-                                   │
-       ┌───────────────────────────▼────────────────────────────┐
-       │             Next.js Serverless Middleware              │
-       │        (Auth.js Identity / Multi-Tenant Guards)        │
-       └───────────────────────────┬────────────────────────────┘
-                                   │
-                     Data Mapping & Schema Queries
-                                   │
-       ┌───────────────────────────▼────────────────────────────┐
-       │           Prisma ORM Layer (Type-Safe Query)           │
-       └───────────────────────────┬────────────────────────────┘
-                                   │
-       ┌───────────────────────────▼────────────────────────────┐
-       │              PostgreSQL Cloud Database                 │
-       │           (Tenant-Isolated Data Clusters)              │
-       └────────────────────────────────────────────────────────┘
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+npm run db:push
+npm run db:seed
+npm run dev
+```
+
+Open http://localhost:3000. The current seed prints presentation account details;
+these shared demo credentials are for local use only. The seed **deletes and
+recreates its demo organization**, so use an empty database. Its named demo
+people, firms, and matters are presentation fixtures; their factual relationship
+to real entities has not been verified. Do not expose this seeded instance publicly.
+
+Real credentials belong in the gitignored `.env`, never in the example.
+The development authentication shortcut is off by default and also requires
+`NODE_ENV=development`. Prefer normal credentials sign-in for workflow checks.
+
+## Optional settings
+
+| Variable | Purpose |
+| --- | --- |
+| `AUTH_MICROSOFT_ENTRA_ID_ID`, `AUTH_MICROSOFT_ENTRA_ID_SECRET`, `AUTH_MICROSOFT_ENTRA_ID_ISSUER` | Optional Entra identity provider; sign-in must still map to a provisioned tenant user |
+| `SYNC_GATEWAY_SIMULATE_FAILURE` | Set to `true` to exercise the simulated gateway error path |
+| `ALLOW_DEV_AUTH_BYPASS`, `DEV_SESSION_USER_ID`, `DEV_SESSION_ORG_ID` | Explicit local development shortcut; never enable on a shared instance |
+
+## Development checks
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+Tests do not require a database. The build imports the Prisma client and needs
+a syntactically valid `DATABASE_URL`; CI uses a non-listening placeholder
+address and does not exercise a live database or external gateway.
+
+## Contributing
+
+Open an issue with reproduction steps or a focused pull request. Include the
+checks you ran and whether the behavior was verified with mocked or live services.
+Avoid sharing law-firm records, client information, session tokens, or credentials.
+
+[The original TimeLex repository](https://github.com/konethegreat/timelex-automated-time-tracking)
+contains an earlier iteration. This repository is the focus of current development.
