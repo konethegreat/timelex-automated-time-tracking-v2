@@ -105,7 +105,7 @@ cross-firm edits, assignment and synchronization; each is rejected.
 ## Recorded evidence and limits
 
 The October 3, 2026 Windows checks use Node.js 26.8.1; CI uses Node.js 24. The
-138 unit tests, typecheck, lint (two existing warnings), production build and
+146 unit tests, typecheck, lint (no warnings), production build and
 36-check PostgreSQL verifier pass. The browser walkthrough separately verifies
 review edits, approval value, sync lockout, firm B visibility and sign-out.
 These screenshots are from that real local browser run.
@@ -115,4 +115,7 @@ entries. Dashboard metrics are organization-wide. Existing write routes are
 organization-scoped, not a complete policy for separate fee-earner/administrator
 approval. Approval uses the approving user's rate. `ERROR` retry, bulk approval,
 automatic activity capture, AI narratives and PDF billing are not implemented.
-The 32 npm advisories and middleware deprecation remain follow-up work.
+The production dependency audit is zero. The full audit retains five high
+development findings from one unpatched lint-chain advisory, described in
+[DEPENDENCIES.md](DEPENDENCIES.md). The middleware convention has been migrated
+to `proxy.ts`; ESLint's supported-major migration remains follow-up work.

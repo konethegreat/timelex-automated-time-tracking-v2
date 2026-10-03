@@ -28,7 +28,8 @@ The implemented workflow is:
 4. Send selected pending entries through the simulated gateway.
 5. View synchronized entries with their sync lock and reviewed duration/value.
 
-The 138 unit tests use a fake Prisma database. A separate 36-check HTTP workflow
+The 146 unit tests include the fake Prisma database suite and dependency audit
+policy regression checks. A separate 36-check HTTP workflow
 uses real Auth.js sessions, the production Next.js server and disposable
 PostgreSQL. It covers cross-firm access denial, duration edits, duplicate and
 concurrent approval, decimal rounding, simulated success and failure. These are
@@ -36,9 +37,9 @@ local/CI checks, not proof of a hosted deployment or live provider integrations.
 
 ## Stack
 
-Next.js **16.2.6**, React **19.2.4**, TypeScript, Auth.js v5 beta,
-Prisma **7**, PostgreSQL, and Tailwind CSS. The package lock records the installed
-dependency versions. CI currently uses Node.js 24.
+Next.js **16.3.8**, React **19.2.8**, TypeScript, Auth.js **5.0.0-beta.32**,
+Prisma **7.10.0**, PostgreSQL, and Tailwind CSS. The package lock records the installed
+dependency versions. Use Node.js 24, matching CI and the package engine range.
 
 ## Reproduce the demonstration
 
@@ -96,6 +97,7 @@ The development authentication shortcut is off by default and also requires
 
 ```bash
 npm run lint
+npm run audit
 npm run typecheck
 npm test
 npm run build
@@ -122,9 +124,12 @@ is manual, without a live AI service. The Ghost Practice bridge is simulated;
 ERROR entries have no retry action yet. Bulk approval and billing/PDF export are
 not implemented. The duration field is bounded to 1–240 six-minute units.
 
-The October 3, 2026 npm audit reports 32 findings (3 critical, 20 high, 5 moderate,
-4 low). Dependency remediation is follow-up work. The build also retains the
-existing middleware-to-proxy deprecation notice and two lint warnings.
+The October 3, 2026 dependency refresh reduced the full npm audit from 32 findings
+to five high development findings, all from one unpatched advisory in Next.js's
+lint chain. The production dependency audit is zero. `npm run audit` and CI reject
+any other finding or runtime use of the reviewed exception. See
+[dependency details and remaining tooling work](docs/DEPENDENCIES.md). The build
+uses the current `proxy.ts` convention, and lint has no warnings.
 
 ## Contributing
 
