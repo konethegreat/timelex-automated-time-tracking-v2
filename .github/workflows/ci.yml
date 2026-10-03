@@ -54,3 +54,16 @@ jobs:
           # The Prisma client refuses to load without a DATABASE_URL, so `next build` needs one.
           # Nothing connects to it during the build; this value is a placeholder, not a real database.
           DATABASE_URL: postgresql://build:build@127.0.0.1:1/placeholder
+
+  postgres-workflow:
+    name: Synthetic PostgreSQL workflow
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run demo:verify

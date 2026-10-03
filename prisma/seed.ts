@@ -1,287 +1,54 @@
 import "dotenv/config";
 import { hash } from "bcryptjs";
-import { Prisma } from "@prisma/client";
-import { prisma } from "../src/lib/prisma";
-
-const ORG_DOMAIN = "mblegalpartners.co.za";
-const DEMO_PASSWORD = "TimeLex2026!";
-
-/** 1 unit = 6 minutes of billable time */
-function entryValue(units: number, hourlyRate: number): Prisma.Decimal {
-  const hours = (units * 6) / 60;
-  return new Prisma.Decimal((hours * hourlyRate).toFixed(2));
-}
-
-function daysAgo(days: number, hour = 10, minute = 0): Date {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  d.setHours(hour, minute, 0, 0);
-  return d;
-}
-
-async function clearDemoOrg() {
-  const existing = await prisma.organization.findUnique({
-    where: { domain: ORG_DOMAIN },
-  });
-  if (existing) {
-    await prisma.organization.delete({ where: { id: existing.id } });
-    console.log("Removed existing M&B Legal Partners seed data.");
-  }
-}
+import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 async function main() {
-  console.log("TimeLex — seeding presentation database…\n");
-
-  await clearDemoOrg();
-
-  const passwordHash = await hash(DEMO_PASSWORD, 12);
-
-  const organization = await prisma.organization.create({
-    data: {
-      name: "M&B Legal Partners",
-      domain: ORG_DOMAIN,
-      subscriptionTier: "Enterprise",
-    },
-  });
-
-  const admin = await prisma.user.create({
-    data: {
-      organizationId: organization.id,
-      name: "Johan Motsoeneng",
-      email: "johan.motsoeneng@mblegalpartners.co.za",
-      role: "FIRM_ADMIN",
-      passwordHash,
-      defaultHourlyRate: new Prisma.Decimal("4200.00"),
-      monthlyBillableTarget: 100,
-    },
-  });
-
-  const stephanie = await prisma.user.create({
-    data: {
-      organizationId: organization.id,
-      name: "Stephanie Chetty",
-      email: "stephanie.chetty@mblegalpartners.co.za",
-      role: "FEE_EARNER",
-      passwordHash,
-      defaultHourlyRate: new Prisma.Decimal("3500.00"),
-      monthlyBillableTarget: 140,
-    },
-  });
-
-  const anchane = await prisma.user.create({
-    data: {
-      organizationId: organization.id,
-      name: "Anchané Botha",
-      email: "anchane.botha@mblegalpartners.co.za",
-      role: "FEE_EARNER",
-      passwordHash,
-      defaultHourlyRate: new Prisma.Decimal("2200.00"),
-      monthlyBillableTarget: 130,
-    },
-  });
-
-  const matters = await Promise.all([
-    prisma.matter.create({
-      data: {
-        organizationId: organization.id,
-        matterNumber: "MB-2024-0142",
-        clientName: "Eskom Holdings SOC Ltd",
-        description:
-          "Regulatory dispute — National Energy Regulator tariff determination and licence compliance advisory.",
-        status: "ACTIVE",
-      },
-    }),
-    prisma.matter.create({
-      data: {
-        organizationId: organization.id,
-        matterNumber: "MB-2025-0087",
-        clientName: "Standard Bank Group Ltd",
-        description:
-          "Corporate M&A — due diligence, SHA drafting, and Competition Commission filing support.",
-        status: "ACTIVE",
-      },
-    }),
-    prisma.matter.create({
-      data: {
-        organizationId: organization.id,
-        matterNumber: "MB-2025-0113",
-        clientName: "Sasol Limited",
-        description:
-          "Environmental law — Section 24G rectification strategy and DEA engagement on Secunda operations.",
-        status: "ACTIVE",
-      },
-    }),
-  ]);
-
-  const [eskom, standardBank, sasol] = matters;
-
-  const drafts = await prisma.draft.createMany({
-    data: [
-      {
-        organizationId: organization.id,
-        userId: stephanie.id,
-        matterId: null,
-        activityType: "EMAIL",
-        sourcePlatform: "Outlook",
-        units: 2,
-        suggestedText:
-          "Email correspondence with Eskom in-house counsel regarding NERSA supplementary information request; reviewed attachments and outlined response timeline.",
-        timestamp: daysAgo(0, 9, 18),
-      },
-      {
-        organizationId: organization.id,
-        userId: anchane.id,
-        matterId: null,
-        activityType: "CALL",
-        sourcePlatform: "Teams",
-        units: 3,
-        suggestedText:
-          "Teleconference with Standard Bank deal team on disclosure schedule gaps; agreed mark-up protocol for warranties basket.",
-        timestamp: daysAgo(1, 14, 30),
-      },
-      {
-        organizationId: organization.id,
-        userId: stephanie.id,
-        matterId: null,
-        activityType: "DOCUMENT",
-        sourcePlatform: "Local",
-        units: 8,
-        suggestedText:
-          "Review and annotation of Sasol environmental impact assessment addendum (Vol. II); flagged non-compliance with NEMA EIA Regulations reg 31.",
-        timestamp: daysAgo(1, 11, 0),
-      },
-      {
-        organizationId: organization.id,
-        userId: anchane.id,
-        matterId: null,
-        activityType: "RESEARCH",
-        sourcePlatform: "Local",
-        units: 5,
-        suggestedText:
-          "Research on Competition Act s12A public interest factors and recent Tribunal decisions affecting banking sector mergers (2024–2025).",
-        timestamp: daysAgo(2, 16, 45),
-      },
-      {
-        organizationId: organization.id,
-        userId: stephanie.id,
-        matterId: null,
-        activityType: "MEETING",
-        sourcePlatform: "Teams",
-        units: 4,
-        suggestedText:
-          "Client strategy meeting with Eskom regulatory affairs — prepared speaking note on licence amendment grounds and next steps for board submission.",
-        timestamp: daysAgo(2, 10, 0),
-      },
-    ],
-  });
-
-  const stephanieRate = 3500;
-  const anchaneRate = 2200;
-
-  const timeEntries = await Promise.all([
-    prisma.timeEntry.create({
-      data: {
-        organizationId: organization.id,
-        userId: stephanie.id,
-        matterId: eskom.id,
-        units: 6,
-        finalizedText:
-          "Drafted reply to NERSA Rule 29 notice; incorporated technical annexures from client engineering team.",
-        hourlyRateApplied: new Prisma.Decimal(stephanieRate.toFixed(2)),
-        totalValue: entryValue(6, stephanieRate),
-        syncStatus: "PENDING",
-        syncLock: false,
-        createdAt: daysAgo(3, 15, 0),
-      },
-    }),
-    prisma.timeEntry.create({
-      data: {
-        organizationId: organization.id,
-        userId: stephanie.id,
-        matterId: eskom.id,
-        units: 4,
-        finalizedText:
-          "Conference with NERSA legal unit — clarified procedural timetable for oral representations.",
-        hourlyRateApplied: new Prisma.Decimal(stephanieRate.toFixed(2)),
-        totalValue: entryValue(4, stephanieRate),
-        syncStatus: "PENDING",
-        syncLock: false,
-        createdAt: daysAgo(5, 11, 30),
-      },
-    }),
-    prisma.timeEntry.create({
-      data: {
-        organizationId: organization.id,
-        userId: anchane.id,
-        matterId: standardBank.id,
-        units: 10,
-        finalizedText:
-          "Prepared first draft of sale and purchase agreement schedules 3–5; circulated to client for commercial input.",
-        hourlyRateApplied: new Prisma.Decimal(anchaneRate.toFixed(2)),
-        totalValue: entryValue(10, anchaneRate),
-        syncStatus: "ERROR",
-        syncLock: false,
-        createdAt: daysAgo(4, 13, 0),
-      },
-    }),
-    prisma.timeEntry.create({
-      data: {
-        organizationId: organization.id,
-        userId: anchane.id,
-        matterId: standardBank.id,
-        units: 3,
-        finalizedText:
-          "File note — Competition Commission pre-notification consultation; recorded authority to proceed with Phase 1 filing.",
-        hourlyRateApplied: new Prisma.Decimal(anchaneRate.toFixed(2)),
-        totalValue: entryValue(3, anchaneRate),
-        syncStatus: "SYNCED",
-        syncLock: true,
-        createdAt: daysAgo(12, 9, 0),
-      },
-    }),
-    prisma.timeEntry.create({
-      data: {
-        organizationId: organization.id,
-        userId: stephanie.id,
-        matterId: sasol.id,
-        units: 12,
-        finalizedText:
-          "Finalised DEA submission pack for Section 24G application; coordinated sign-off with environmental consultants.",
-        hourlyRateApplied: new Prisma.Decimal(stephanieRate.toFixed(2)),
-        totalValue: entryValue(12, stephanieRate),
-        syncStatus: "SYNCED",
-        syncLock: true,
-        createdAt: daysAgo(18, 16, 0),
-      },
-    }),
-  ]);
-
-  console.log("Seed complete:\n");
-  console.log(`  Organization : ${organization.name} (${organization.domain})`);
-  console.log(`  Users        : 3 (1 Firm Admin, 2 Fee Earners)`);
-  console.log(`  Matters      : ${matters.length}`);
-  console.log(`  Drafts       : ${drafts.count} (unassigned)`);
-  console.log(`  Time entries : ${timeEntries.length}`);
-  console.log("    — 2 × PENDING (awaiting Ghost Practice push)");
-  console.log("    — 1 × ERROR   (gateway rejection — editable)");
-  console.log("    — 2 × SYNCED  (syncLock: true — ledger locked)\n");
-  console.log("Sign-in (credentials):");
-  console.log(`  Password (all users): ${DEMO_PASSWORD}`);
-  console.log(`  Admin  : ${admin.email}`);
-  console.log(`  User 1 : ${stephanie.email}`);
-  console.log(`  User 2 : ${anchane.email}\n`);
-  console.log("Optional dev bypass (.env):");
-  console.log(`  ALLOW_DEV_AUTH_BYPASS=true`);
-  console.log(`  DEV_SESSION_ORG_ID=${organization.id}`);
-  console.log(`  DEV_SESSION_USER_ID=${admin.id}`);
-  console.log(`  DEV_SESSION_EMAIL=${admin.email}`);
+  const databaseUrl = process.env.DATABASE_URL;
+  const password = process.env.DEMO_PASSWORD;
+  if (process.env.TIMELEX_DISPOSABLE_DEMO !== "true" || !databaseUrl) {
+    throw new Error("Run npm run demo or npm run demo:verify to seed a disposable database.");
+  }
+  const url = new URL(databaseUrl);
+  if (!["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) || url.pathname !== "/timelex_demo") {
+    throw new Error("Synthetic seeding requires the local timelex_demo database.");
+  }
+  if (!password || password.length < 12) throw new Error("DEMO_PASSWORD must contain at least 12 characters.");
+  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) });
+  try {
+    if (await prisma.organization.count() !== 0) throw new Error("Synthetic seeding requires an empty database; nothing was deleted.");
+    const passwordHash = await hash(password, 12);
+    await prisma.$transaction(async tx => {
+      const firmA = await tx.organization.create({ data: { name: "Demo Firm A (fictional)", domain: "firm-a.example" } });
+      const firmB = await tx.organization.create({ data: { name: "Demo Firm B (fictional)", domain: "firm-b.example" } });
+      const createUser = (organizationId: string, name: string, email: string, role: "FIRM_ADMIN" | "FEE_EARNER", rate: string) => tx.user.create({
+        data: { organizationId, name, email, role, passwordHash, defaultHourlyRate: new Prisma.Decimal(rate), monthlyBillableTarget: 120 },
+      });
+      await createUser(firmA.id, "Demo Admin A", "demo.admin.a@example.com", "FIRM_ADMIN", "3500.00");
+      const reviewerA = await createUser(firmA.id, "Demo Reviewer A", "demo.reviewer.a@example.com", "FEE_EARNER", "3500.00");
+      const colleagueA = await createUser(firmA.id, "Demo Colleague A", "demo.colleague.a@example.com", "FEE_EARNER", "2200.00");
+      const reviewerB = await createUser(firmB.id, "Demo Reviewer B", "demo.reviewer.b@example.com", "FEE_EARNER", "1000.55");
+      const matterA = await tx.matter.create({ data: { organizationId: firmA.id, matterNumber: "DEMO-A-001", clientName: "Fictional Client Alpha", description: "Synthetic lease review" } });
+      await tx.matter.create({ data: { organizationId: firmA.id, matterNumber: "DEMO-A-CLOSED", clientName: "Fictional Closed Client", description: "Synthetic closed matter", status: "CLOSED" } });
+      const matterB = await tx.matter.create({ data: { organizationId: firmB.id, matterNumber: "DEMO-B-001", clientName: "Fictional Client Beta", description: "Synthetic firm B matter" } });
+      const draft = (organizationId: string, userId: string, text: string, units: number, matterId: string | null = null) => tx.draft.create({
+        data: { organizationId, userId, matterId, activityType: "EMAIL", sourcePlatform: "Synthetic fixture", units, suggestedText: text },
+      });
+      await draft(firmA.id, reviewerA.id, "Synthetic email: review the fictional lease terms", 2);
+      await draft(firmA.id, reviewerA.id, "Synthetic document: check concurrent approval", 3, matterA.id);
+      await draft(firmA.id, reviewerA.id, "Synthetic note: exercise gateway failure", 1, matterA.id);
+      await draft(firmA.id, colleagueA.id, "Synthetic colleague note: separate fee earner", 4);
+      await draft(firmB.id, reviewerB.id, "Synthetic firm B note: verify tenant boundary and rounding", 3, matterB.id);
+      await tx.timeEntry.create({ data: {
+        organizationId: firmB.id, userId: reviewerB.id, matterId: matterB.id,
+        units: 2, finalizedText: "Synthetic firm B pre-existing entry", hourlyRateApplied: new Prisma.Decimal("1000.55"),
+        totalValue: new Prisma.Decimal("200.11"), syncStatus: "PENDING", syncLock: false,
+      } });
+    });
+    console.log("Synthetic data ready: two fictional firms, four users, three matters, five drafts and one firm B ledger entry.");
+    console.log("Accounts: demo.admin.a@example.com, demo.reviewer.a@example.com, demo.colleague.a@example.com, demo.reviewer.b@example.com");
+    console.log("Use your supplied DEMO_PASSWORD. Activity is seeded, not captured from a provider.");
+  } finally { await prisma.$disconnect(); }
 }
 
-main()
-  .catch((e) => {
-    console.error("Seed failed:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main().catch(error => { console.error(error instanceof Error ? error.message : "Synthetic seeding failed"); process.exitCode = 1; });

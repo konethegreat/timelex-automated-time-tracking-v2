@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { signOut, useSession } from "next-auth/react";
+import { Button } from "@/components/ui/button";
 
 const navItems = [
   { href: "/dashboard", label: "Executive Dashboard" },
@@ -13,6 +15,7 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   return (
     <div className="flex min-h-full bg-canvas">
@@ -45,6 +48,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="border-t border-sidebar-border px-6 py-4">
+          <p className="mb-2 text-xs text-muted-foreground">{session?.user?.name}</p>
+          <Button variant="outline" className="mb-4" onClick={() => signOut({ callbackUrl: "/login" })}>Sign out</Button>
           <p className="text-xs text-muted-foreground">Ghost Practice Bridge</p>
           <p className="mt-0.5 text-xs font-medium text-primary">Simulated</p>
         </div>
