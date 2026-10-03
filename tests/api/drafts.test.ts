@@ -155,4 +155,48 @@ describe("PATCH /api/drafts/bulk (attorney review: assign matter, edit narrative
       matterId: ids.matterA1,
     });
   });
+
+  describe("units (the duration the reviewer sets)", () => {
+    it("saves the duration, in 6-minute units", async () => {
+      signInAs("earnerA1");
+      const { status, body } = await patch({ draftIds: [ids.draftA1], units: 4 });
+      expect(status).toBe(200);
+      expect(draft(ids.draftA1)?.units).toBe(4);
+      expect(body.drafts?.[0]).toMatchObject({ units: 4 });
+    });
+
+    it("leaves the duration alone when no units are sent", async () => {
+      signInAs("earnerA1");
+      await patch({ draftIds: [ids.draftA1], matterId: ids.matterA1 });
+      expect(draft(ids.draftA1)?.units).toBe(2);
+    });
+
+    it.each([1, 240])("accepts %i units", async (units) => {
+      signInAs("earnerA1");
+      expect((await patch({ draftIds: [ids.draftA1], units })).status).toBe(200);
+      expect(draft(ids.draftA1)?.units).toBe(units);
+    });
+
+    it.each([0, -1, 2.5, "3", null, true, 241, 10_000_000_000])(
+      "rejects units %j and changes nothing",
+      async (units) => {
+        signInAs("earnerA1");
+        const { status, body } = await patch({
+          draftIds: [ids.draftA1],
+          matterId: ids.matterA1,
+          units,
+        });
+        expect(status).toBe(400);
+        expect(body.error).toBe("units must be a whole number from 1 to 240");
+        expect(draft(ids.draftA1)).toMatchObject({ units: 2, matterId: null });
+      },
+    );
+
+    it("does not change the duration of another firm's draft", async () => {
+      signInAs("earnerA1");
+      const { status } = await patch({ draftIds: [ids.draftB1], units: 9 });
+      expect(status).toBe(404);
+      expect(draft(ids.draftB1)?.units).toBe(4);
+    });
+  });
 });

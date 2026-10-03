@@ -71,7 +71,7 @@ export default function DraftsPage() {
     units: number,
     narrative: string
   ) => {
-    // First update the draft with matter and narrative
+    // First update the draft with matter, narrative and the duration set in the form
     const updateResponse = await fetch("/api/drafts/bulk", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -79,6 +79,7 @@ export default function DraftsPage() {
         draftIds: [draftId],
         matterId,
         suggestedText: narrative,
+        units,
       }),
     });
 

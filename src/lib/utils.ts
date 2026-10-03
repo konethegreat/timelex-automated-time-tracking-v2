@@ -8,6 +8,9 @@ export function cn(...inputs: ClassValue[]) {
 /** One billing unit = 6 minutes. */
 export const MINUTES_PER_UNIT = 6;
 
+/** Longest single entry a reviewer can set: 240 units = 24 hours. */
+export const MAX_UNITS_PER_ENTRY = 240;
+
 export function unitsToHours(units: number): number {
   return (units * MINUTES_PER_UNIT) / 60;
 }
