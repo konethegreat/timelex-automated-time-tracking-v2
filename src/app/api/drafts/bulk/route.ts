@@ -5,11 +5,13 @@ import {
   assertTenantOwnership,
   tenantWhere,
 } from "@/lib/tenant";
+import { MAX_UNITS_PER_ENTRY } from "@/lib/utils";
 
 type BulkDraftPatch = {
   draftIds: string[];
   matterId?: string | null;
   suggestedText?: string;
+  units?: number;
 };
 
 export const PATCH = withTenantApi(async (request, _context, session) => {
@@ -20,6 +22,21 @@ export const PATCH = withTenantApi(async (request, _context, session) => {
   if (!Array.isArray(body.draftIds) || body.draftIds.length === 0) {
     return NextResponse.json(
       { error: "draftIds array is required" },
+      { status: 400 },
+    );
+  }
+
+  if (
+    body.units !== undefined &&
+    !(
+      typeof body.units === "number" &&
+      Number.isInteger(body.units) &&
+      body.units >= 1 &&
+      body.units <= MAX_UNITS_PER_ENTRY
+    )
+  ) {
+    return NextResponse.json(
+      { error: `units must be a whole number from 1 to ${MAX_UNITS_PER_ENTRY}` },
       { status: 400 },
     );
   }
@@ -45,10 +62,12 @@ export const PATCH = withTenantApi(async (request, _context, session) => {
   const data: {
     matterId?: string | null;
     suggestedText?: string;
+    units?: number;
   } = {};
 
   if (body.matterId !== undefined) data.matterId = body.matterId;
   if (body.suggestedText !== undefined) data.suggestedText = body.suggestedText;
+  if (body.units !== undefined) data.units = body.units;
 
   await prisma.draft.updateMany({
     where: { ...scope, id: { in: body.draftIds } },

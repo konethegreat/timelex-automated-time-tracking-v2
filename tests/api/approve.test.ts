@@ -83,6 +83,19 @@ describe("POST /api/entries/approve", () => {
     expect(Number(entry.totalValue)).toBe(1050);
   });
 
+  it("uses the duration the reviewer set before approving (4 units instead of 2 at R3500/h = R1400)", async () => {
+    signInAs("earnerA1");
+    await invoke(PATCH, {
+      method: "PATCH",
+      body: { draftIds: [ids.draftA1], matterId: ids.matterA1, units: 4 },
+    });
+
+    const { body } = await approve([ids.draftA1]);
+    const entry = body.entries![0];
+    expect(entry.units).toBe(4);
+    expect(Number(entry.totalValue)).toBe(1400);
+  });
+
   it("rounds half a cent up (3 units at R1000.55/h = R300.165 = R300.17)", async () => {
     signInAs("earnerA1");
     const earner = fake.$tables.user.find((row) => row.id === ids.earnerA1)!;
