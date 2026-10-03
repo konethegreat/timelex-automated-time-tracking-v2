@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="border-t border-sidebar-border px-6 py-4">
           <p className="text-xs text-muted-foreground">Ghost Practice Bridge</p>
-          <p className="mt-0.5 text-xs font-medium text-primary">Connected</p>
+          <p className="mt-0.5 text-xs font-medium text-primary">Simulated</p>
         </div>
       </aside>
       <main className="flex flex-1 flex-col bg-background">{children}</main>

@@ -22,7 +22,7 @@ export default function AuthLayout({
             Firm workspace
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            Secure multi-tenant legal time capture
+            Multi-tenant time-entry review (prototype)
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">{children}</CardContent>

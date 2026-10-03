@@ -13,7 +13,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "TimeLex",
   description:
-    "Multi-tenant automated legal time capture — Ghost Practice integration layer",
+    "Prototype multi-tenant time-entry review for law firms, with a simulated Ghost Practice export",
 };
 
 export default function RootLayout({

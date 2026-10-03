@@ -6,7 +6,7 @@ export default function LedgerPage() {
     <>
       <PageHeader
         title="Time Ledger"
-        description="Approved entries with sync gate — locked after Ghost Practice push."
+        description="Placeholder: approved entries are not listed here yet. Entries lock after the simulated Ghost Practice export."
       />
       <section className="p-8">
         <Card className="border-border bg-card">
@@ -14,7 +14,7 @@ export default function LedgerPage() {
             <CardTitle className="text-base text-primary">Sync lockout</CardTitle>
             <CardDescription>
               Entries with <span className="font-medium text-primary">syncLock</span>{" "}
-              are read-only to prevent double-billing in Ghost Practice.
+              are read-only, so that they cannot be exported twice (the export is simulated).
             </CardDescription>
           </CardHeader>
         </Card>
