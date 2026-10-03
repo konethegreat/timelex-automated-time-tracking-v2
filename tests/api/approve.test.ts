@@ -83,6 +83,17 @@ describe("POST /api/entries/approve", () => {
     expect(Number(entry.totalValue)).toBe(1050);
   });
 
+  it("rounds half a cent up (3 units at R1000.55/h = R300.165 = R300.17)", async () => {
+    signInAs("earnerA1");
+    const earner = fake.$tables.user.find((row) => row.id === ids.earnerA1)!;
+    earner.defaultHourlyRate = new Prisma.Decimal("1000.55");
+
+    const { body } = await approve([ids.draftA3]);
+    const entry = body.entries![0];
+    expect(entry.hourlyRateApplied).toBe("1000.55");
+    expect(entry.totalValue).toBe("300.17");
+  });
+
   it("approves several drafts in one request", async () => {
     signInAs("earnerA1");
     await assignMatter([ids.draftA1], ids.matterA1);
