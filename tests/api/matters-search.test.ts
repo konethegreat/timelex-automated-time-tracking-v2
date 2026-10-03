@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { GET } from "@/app/api/matters/search/route";
-import { ids, invoke, seedWorld, signInAs, signedOut } from "../helpers/world";
+import { fake, ids, invoke, seedWorld, signInAs, signedOut } from "../helpers/world";
 
 type MatterJson = { id: string; matterNumber: string; clientName: string; description: string };
 
@@ -52,5 +53,38 @@ describe("GET /api/matters/search", () => {
     }
     signInAs("earnerB1");
     expect((await search("?q=gamma")).body.matters.map((m) => m.id)).toEqual([ids.matterB1]);
+  });
+
+  describe("limit", () => {
+    // 60 more active matters, so that the firm has 61 and the limit is visible.
+    beforeEach(() => {
+      for (let n = 1; n <= 60; n++) {
+        fake.$insert("matter", {
+          id: randomUUID(),
+          organizationId: ids.orgA,
+          matterNumber: `BULK-${String(n).padStart(3, "0")}`,
+          clientName: `Bulk client ${String(n).padStart(3, "0")} (synthetic)`,
+          description: "Synthetic matter for the limit tests",
+          status: "ACTIVE",
+        });
+      }
+    });
+
+    it.each([
+      ["is not given", "", 20],
+      ["is a whole number", "?limit=5", 5],
+      ["is above the maximum", "?limit=1000", 50],
+      ["is not a number", "?limit=abc", 20],
+      ["is empty", "?limit=", 20],
+      ["is zero", "?limit=0", 20],
+      ["is negative", "?limit=-3", 20],
+      ["is a fraction", "?limit=2.5", 20],
+      ["is Infinity", "?limit=Infinity", 20],
+    ])("when the limit %s (query %j), returns %i matters", async (_label, query, expected) => {
+      signInAs("earnerA1");
+      const { status, body } = await search(query);
+      expect(status).toBe(200);
+      expect(body.matters).toHaveLength(expected);
+    });
   });
 });
