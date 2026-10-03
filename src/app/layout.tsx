@@ -28,6 +28,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        {process.env.NEXT_PUBLIC_TIMELEX_DEMO_MODE === "true" && (
+          <div role="status" className="border-b border-primary/30 bg-primary/10 px-4 py-2 text-center text-sm">
+            Local synthetic demo · fictional firms and clients · gateway simulation only
+          </div>
+        )}
         <AuthSessionProvider>
           <ToasterProvider>{children}</ToasterProvider>
         </AuthSessionProvider>

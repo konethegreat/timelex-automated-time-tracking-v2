@@ -99,16 +99,6 @@ export default function DraftsPage() {
     }
   };
 
-  const handleApproveAll = async () => {
-    const unassignedDrafts = drafts.filter((d) => !d.matterId);
-    if (unassignedDrafts.length === 0) {
-      toast.error("No unassigned drafts to approve");
-      return;
-    }
-
-    throw new Error("Approve all requires matter assignment first");
-  };
-
   const handleMatterSearch = async (query: string) => {
     try {
       const response = await fetch(`/api/matters/search?q=${encodeURIComponent(query)}`);
@@ -180,7 +170,6 @@ export default function DraftsPage() {
           selectedDraft={selectedDraft || null}
           matters={matters}
           onApprove={handleApprove}
-          onApproveAll={handleApproveAll}
           onMatterSearch={handleMatterSearch}
           onDraftUpdated={handleDraftUpdated}
         />

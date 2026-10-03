@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Minus, Check, CheckCheck } from "lucide-react";
+import { Plus, Minus, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MatterSelector } from "@/components/ui/command";
 import { toast } from "sonner";
-import { unitsToHours } from "@/lib/utils";
+import { MAX_UNITS_PER_ENTRY, unitsToHours } from "@/lib/utils";
 
 interface Matter {
   id: string;
@@ -35,7 +35,6 @@ interface AssignmentFormProps {
   selectedDraft: Draft | null;
   matters: Matter[];
   onApprove: (draftId: string, matterId: string, units: number, narrative: string) => Promise<void>;
-  onApproveAll: () => Promise<void>;
   onMatterSearch: (query: string) => void;
   onDraftUpdated: () => void;
 }
@@ -44,7 +43,6 @@ export function AssignmentForm({
   selectedDraft,
   matters,
   onApprove,
-  onApproveAll,
   onMatterSearch,
   onDraftUpdated,
 }: AssignmentFormProps) {
@@ -52,10 +50,9 @@ export function AssignmentForm({
   const [units, setUnits] = React.useState(selectedDraft?.units ?? 1);
   const [narrative, setNarrative] = React.useState(selectedDraft?.suggestedText ?? "");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [isApprovingAll, setIsApprovingAll] = React.useState(false);
 
   const handleUnitChange = (delta: number) => {
-    const newUnits = Math.max(1, units + delta);
+    const newUnits = Math.min(MAX_UNITS_PER_ENTRY, Math.max(1, units + delta));
     setUnits(newUnits);
   };
 
@@ -76,20 +73,6 @@ export function AssignmentForm({
       console.error(error);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleApproveAll = async () => {
-    setIsApprovingAll(true);
-    try {
-      await onApproveAll();
-      toast.success("All drafts approved successfully");
-      onDraftUpdated();
-    } catch (error) {
-      toast.error("Failed to approve all drafts");
-      console.error(error);
-    } finally {
-      setIsApprovingAll(false);
     }
   };
 
@@ -147,6 +130,7 @@ export function AssignmentForm({
               variant="outline"
               size="icon"
               onClick={() => handleUnitChange(-1)}
+              aria-label="Decrease duration"
               disabled={units <= 1}
             >
               <Minus className="h-4 w-4" />
@@ -155,15 +139,18 @@ export function AssignmentForm({
               id="units"
               type="number"
               value={units}
-              onChange={(e) => setUnits(Math.max(1, parseInt(e.target.value) || 1))}
+              onChange={(e) => setUnits(Math.min(MAX_UNITS_PER_ENTRY, Math.max(1, parseInt(e.target.value) || 1)))}
               className="text-center"
               min={1}
+              max={MAX_UNITS_PER_ENTRY}
             />
             <Button
               type="button"
               variant="outline"
               size="icon"
               onClick={() => handleUnitChange(1)}
+              aria-label="Increase duration"
+              disabled={units >= MAX_UNITS_PER_ENTRY}
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -174,6 +161,7 @@ export function AssignmentForm({
         </div>
 
         {/* Smart Narrative Text Area */}
+        <p className="text-xs text-muted-foreground">1–240 units; each unit is six minutes.</p>
         <div className="space-y-2">
           <Label htmlFor="narrative">Narrative</Label>
           <textarea
@@ -199,20 +187,6 @@ export function AssignmentForm({
               <>
                 <Check className="mr-2 h-4 w-4" />
                 Approve
-              </>
-            )}
-          </Button>
-          <Button
-            onClick={handleApproveAll}
-            variant="outline"
-            disabled={isApprovingAll}
-          >
-            {isApprovingAll ? (
-              "Approving All..."
-            ) : (
-              <>
-                <CheckCheck className="mr-2 h-4 w-4" />
-                Approve All
               </>
             )}
           </Button>
